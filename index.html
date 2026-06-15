@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Control de Acceso a Laboratorios</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+<style>
+
+body{
+    font-family:Arial;
+    text-align:center;
+    background:#f4f4f4;
+}
+
+h1{
+    color:#003366;
+}
+
+button{
+    padding:15px 30px;
+    font-size:20px;
+    background:#003366;
+    color:white;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+}
+
+#webcam-container{
+    margin-top:20px;
+}
+
+#resultado{
+    margin-top:20px;
+    font-size:35px;
+    font-weight:bold;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>CONTROL DE ACCESO A LABORATORIOS</h1>
+
+<button onclick="init()">Iniciar Cámara</button>
+
+<div id="webcam-container"></div>
+
+<div id="resultado"></div>
+
+<script>
+
+const URL = "https://teachablemachine.withgoogle.com/models/9n3dRIOC6/";
+
+let model;
+let webcam;
+
+async function init(){
+
+    model = await tmImage.load(
+        URL + "model.json",
+        URL + "metadata.json"
+    );
+
+    webcam = new tmImage.Webcam(400,400,true);
+
+    await webcam.setup();
+
+    await webcam.play();
+
+    window.requestAnimationFrame(loop);
+
+    document.getElementById("webcam-container").appendChild(webcam.canvas);
+
+}
+
+async function loop(){
+
+    webcam.update();
+
+    await predict();
+
+    window.requestAnimationFrame(loop);
+
+}
+
+async function predict(){
+
+    const prediction = await model.predict(webcam.canvas);
+
+    let mejor = prediction[0];
+
+    for(let i=1;i<prediction.length;i++){
+
+        if(prediction[i].probability > mejor.probability){
+
+            mejor = prediction[i];
+
+        }
+
+    }
+
+    let resultado = document.getElementById("resultado");
+
+    if(mejor.className=="Bata azul"){
+
+        resultado.innerHTML="🟦 ACCESO PERMITIDO<br>Laboratorio de Informática";
+
+        resultado.style.color="blue";
+
+    }
+
+    else if(mejor.className=="Bata blanca"){
+
+        resultado.innerHTML="⬜ ACCESO PERMITIDO<br>Laboratorio de Química";
+
+        resultado.style.color="green";
+
+    }
+
+    else{
+
+        resultado.innerHTML="❌ ACCESO DENEGADO";
+
+        resultado.style.color="red";
+
+    }
+
+}
+
+</script>
+
+</body>
+</html>
