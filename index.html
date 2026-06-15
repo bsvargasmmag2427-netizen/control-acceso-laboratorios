@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
 <meta charset="UTF-8">
 <title>Control de Acceso a Laboratorios</title>
@@ -10,33 +11,62 @@
 <style>
 
 body{
-    font-family:Arial;
+    margin:0;
+    font-family:Arial,sans-serif;
+    background:#e8eef5;
     text-align:center;
-    background:#f4f4f4;
+}
+
+header{
+    background:#003366;
+    color:white;
+    padding:20px;
 }
 
 h1{
-    color:#003366;
+    margin:0;
 }
 
 button{
+    margin-top:20px;
     padding:15px 30px;
     font-size:20px;
-    background:#003366;
+    background:#0055aa;
     color:white;
     border:none;
     border-radius:10px;
     cursor:pointer;
 }
 
+button:hover{
+    background:#003366;
+}
+
 #webcam-container{
-    margin-top:20px;
+    margin-top:25px;
+}
+
+canvas{
+    border:5px solid #003366;
+    border-radius:15px;
 }
 
 #resultado{
-    margin-top:20px;
-    font-size:35px;
+
+    margin-top:25px;
+
+    font-size:32px;
+
     font-weight:bold;
+
+}
+
+#estado{
+
+    margin-top:10px;
+
+    font-size:20px;
+
 }
 
 </style>
@@ -45,37 +75,61 @@ button{
 
 <body>
 
+<header>
+
 <h1>CONTROL DE ACCESO A LABORATORIOS</h1>
 
-<button onclick="init()">Iniciar Cámara</button>
+<p>Reconocimiento de Equipo de Protección</p>
+
+</header>
+
+<button id="btn" onclick="init()">Iniciar Cámara</button>
 
 <div id="webcam-container"></div>
 
-<div id="resultado"></div>
+<div id="resultado">Presiona "Iniciar Cámara"</div>
+
+<div id="estado"></div>
 
 <script>
 
-const URL = "https://teachablemachine.withgoogle.com/models/9n3dRIOC6/";
+const URL="https://teachablemachine.withgoogle.com/models/9n3dRIOC6/";
 
 let model;
 let webcam;
+let iniciado=false;
 
 async function init(){
 
-    model = await tmImage.load(
-        URL + "model.json",
-        URL + "metadata.json"
+    if(iniciado){
+
+        return;
+
+    }
+
+    iniciado=true;
+
+    document.getElementById("btn").disabled=true;
+
+    document.getElementById("resultado").innerHTML="🔍 Cargando modelo...";
+
+    model=await tmImage.load(
+
+        URL+"model.json",
+
+        URL+"metadata.json"
+
     );
 
-    webcam = new tmImage.Webcam(400,400,true);
+    webcam=new tmImage.Webcam(400,400,true);
 
     await webcam.setup();
 
     await webcam.play();
 
-    window.requestAnimationFrame(loop);
-
     document.getElementById("webcam-container").appendChild(webcam.canvas);
+
+    window.requestAnimationFrame(loop);
 
 }
 
@@ -91,43 +145,55 @@ async function loop(){
 
 async function predict(){
 
-    const prediction = await model.predict(webcam.canvas);
+    const prediction=await model.predict(webcam.canvas);
 
-    let mejor = prediction[0];
+    let mejor=prediction[0];
 
     for(let i=1;i<prediction.length;i++){
 
-        if(prediction[i].probability > mejor.probability){
+        if(prediction[i].probability>mejor.probability){
 
-            mejor = prediction[i];
+            mejor=prediction[i];
 
         }
 
     }
 
-    let resultado = document.getElementById("resultado");
+    let porcentaje=(mejor.probability*100).toFixed(1);
 
-    if(mejor.className=="Bata azul"){
+    document.getElementById("estado").innerHTML="Confianza: "+porcentaje+"%";
 
-        resultado.innerHTML="🟦 ACCESO PERMITIDO<br>Laboratorio de Informática";
+    if(mejor.probability<0.80){
 
-        resultado.style.color="blue";
+        document.getElementById("resultado").innerHTML="🔍 Analizando...";
+
+        document.getElementById("resultado").style.color="black";
+
+        return;
 
     }
 
-    else if(mejor.className=="Bata blanca"){
+    if(mejor.className==="Bata azul"){
 
-        resultado.innerHTML="⬜ ACCESO PERMITIDO<br>Laboratorio de Química";
+        document.getElementById("resultado").innerHTML="🟦 ACCESO PERMITIDO<br>Laboratorio de Informática";
 
-        resultado.style.color="green";
+        document.getElementById("resultado").style.color="blue";
+
+    }
+
+    else if(mejor.className==="Bata blanca"){
+
+        document.getElementById("resultado").innerHTML="⬜ ACCESO PERMITIDO<br>Laboratorio de Química";
+
+        document.getElementById("resultado").style.color="green";
 
     }
 
     else{
 
-        resultado.innerHTML="❌ ACCESO DENEGADO";
+        document.getElementById("resultado").innerHTML="❌ ACCESO DENEGADO<br>Equipo incorrecto";
 
-        resultado.style.color="red";
+        document.getElementById("resultado").style.color="red";
 
     }
 
@@ -136,4 +202,5 @@ async function predict(){
 </script>
 
 </body>
+
 </html>
