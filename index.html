@@ -1,62 +1,108 @@
+```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
 
 <meta charset="UTF-8">
-<title>Sistema de Acceso a Laboratorios</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Sistema Inteligente de Control de Acceso</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
 
 <style>
 
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Arial,Helvetica,sans-serif;
+}
+
 body{
-    font-family:Arial,sans-serif;
-    background:#eef2f7;
-    text-align:center;
-    margin:0;
+background:#eef3f8;
+text-align:center;
 }
 
 header{
-    background:#003366;
-    color:white;
-    padding:20px;
+background:#003366;
+color:white;
+padding:20px;
+}
+
+header h1{
+margin-bottom:10px;
+}
+
+main{
+max-width:900px;
+margin:auto;
+padding:30px;
+}
+
+select{
+
+padding:12px;
+font-size:18px;
+border-radius:8px;
+width:320px;
+
 }
 
 button{
-    padding:15px 30px;
-    font-size:20px;
-    border:none;
-    border-radius:10px;
-    background:#0055aa;
-    color:white;
-    cursor:pointer;
-    margin-top:20px;
+
+margin-top:20px;
+padding:15px 30px;
+font-size:20px;
+background:#0055aa;
+color:white;
+border:none;
+border-radius:10px;
+cursor:pointer;
+
 }
 
 button:hover{
-    background:#003366;
+
+background:#003366;
+
 }
 
 #webcam-container{
-    margin-top:25px;
+
+margin-top:30px;
+
 }
 
 canvas{
-    border-radius:15px;
-    border:5px solid #003366;
+
+border-radius:15px;
+border:5px solid #003366;
+
 }
 
 #resultado{
-    margin-top:25px;
-    font-size:32px;
-    font-weight:bold;
+
+margin-top:30px;
+font-size:42px;
+font-weight:bold;
+
+}
+
+#detalle{
+
+margin-top:15px;
+font-size:24px;
+
 }
 
 #confianza{
-    margin-top:10px;
-    font-size:20px;
-    color:#555;
+
+margin-top:15px;
+font-size:18px;
+color:#555;
+
 }
 
 </style>
@@ -68,19 +114,44 @@ canvas{
 <header>
 
 <h1>SISTEMA DE CONTROL DE ACCESO A LABORATORIOS</h1>
-<p>Reconocimiento de Equipo de Protección</p>
+
+<p>Reconocimiento mediante Inteligencia Artificial</p>
 
 </header>
 
-<button id="boton" onclick="init()">
+<main>
+
+<h2>Seleccione un laboratorio</h2>
+
+<br>
+
+<select id="laboratorio">
+
+<option value="informatica">💻 Informática</option>
+
+<option value="quimica">🧪 Química</option>
+
+<option value="mantenimiento">🔧 Mantenimiento Automotriz</option>
+
+</select>
+
+<br>
+
+<button id="btn" onclick="init()">
+
 Iniciar Cámara
+
 </button>
 
 <div id="webcam-container"></div>
 
 <div id="resultado">
-Presiona "Iniciar Cámara"
+
+Esperando inicio...
+
 </div>
+
+<div id="detalle"></div>
 
 <div id="confianza"></div>
 
@@ -91,28 +162,29 @@ const URL="https://teachablemachine.withgoogle.com/models/9n3dRIOC6/";
 let model;
 let webcam;
 let iniciado=false;
-
+```
+let iniciado=false;
+```javascript
 async function init(){
 
     if(iniciado){
         return;
     }
 
-    iniciado=true;
+    iniciado = true;
 
-    document.getElementById("boton").disabled=true;
+    document.getElementById("btn").disabled = true;
 
-    document.getElementById("resultado").innerHTML="🔍 Cargando modelo...";
+    document.getElementById("resultado").innerHTML = "🔍 Cargando modelo...";
 
-    model=await tmImage.load(
-        URL+"model.json",
-        URL+"metadata.json"
+    model = await tmImage.load(
+        URL + "model.json",
+        URL + "metadata.json"
     );
 
-    webcam=new tmImage.Webcam(400,400,true);
+    webcam = new tmImage.Webcam(400,400,true);
 
     await webcam.setup();
-
     await webcam.play();
 
     document.getElementById("webcam-container").appendChild(webcam.canvas);
@@ -133,61 +205,105 @@ async function loop(){
 
 async function predict(){
 
-    const prediction=await model.predict(webcam.canvas);
+    const prediction = await model.predict(webcam.canvas);
 
-    let mejor=prediction[0];
+    let mejor = prediction[0];
 
     for(let i=1;i<prediction.length;i++){
 
-        if(prediction[i].probability>mejor.probability){
+        if(prediction[i].probability > mejor.probability){
 
-            mejor=prediction[i];
+            mejor = prediction[i];
 
         }
 
     }
 
-    document.getElementById("confianza").innerHTML=
-    "Confianza: "+(mejor.probability*100).toFixed(1)+"%";
+    const confianza = (mejor.probability*100).toFixed(1);
 
-    if(mejor.probability<0.80){
+    document.getElementById("confianza").innerHTML =
+    "Confianza del modelo: " + confianza + "%";
 
-        document.getElementById("resultado").innerHTML="🔍 Analizando...";
-        document.getElementById("resultado").style.color="black";
+    if(mejor.probability < 0.80){
+
+        document.getElementById("resultado").innerHTML =
+        "🔍 Analizando...";
+
+        document.getElementById("resultado").style.color = "#000";
+
+        document.getElementById("detalle").innerHTML = "";
+
         return;
 
     }
 
-    if(mejor.className=="bata azul"){
+    let laboratorio =
+    document.getElementById("laboratorio").value;
 
-        document.getElementById("resultado").innerHTML=
-        "🟦 ACCESO PERMITIDO<br>Laboratorio de Informática";
+    let permitido = false;
 
-        document.getElementById("resultado").style.color="blue";
+    if(laboratorio=="informatica" && mejor.className=="bata azul"){
 
-    }
-
-    else if(mejor.className=="bata blanca"){
-
-        document.getElementById("resultado").innerHTML=
-        "⬜ ACCESO PERMITIDO<br>Laboratorio de Química";
-
-        document.getElementById("resultado").style.color="green";
+        permitido = true;
 
     }
 
-    else if(mejor.className=="incorrecto"){
+    if(laboratorio=="quimica" && mejor.className=="bata blanca"){
 
-        document.getElementById("resultado").innerHTML=
-        "❌ ACCESO DENEGADO<br>Equipo incorrecto";
+        permitido = true;
 
-        document.getElementById("resultado").style.color="red";
+    }
+
+    if(laboratorio=="mantenimiento" && mejor.className=="bata azul"){
+
+        permitido = true;
+
+    }
+
+    if(permitido){
+
+        document.getElementById("resultado").innerHTML =
+        "✅ ACCESO PERMITIDO";
+
+        document.getElementById("resultado").style.color =
+        "green";
+
+        document.getElementById("detalle").innerHTML =
+        "Equipo detectado correctamente";
+
+    }else{
+
+        document.getElementById("resultado").innerHTML =
+        "❌ ACCESO DENEGADO";
+
+        document.getElementById("resultado").style.color =
+        "red";
+
+        document.getElementById("detalle").innerHTML =
+        "El equipo no corresponde al laboratorio seleccionado";
 
     }
 
 }
-
+```
+```html
 </script>
+
+</main>
+
+<footer style="
+margin-top:40px;
+padding:20px;
+background:#003366;
+color:white;
+font-size:16px;
+">
+
+Sistema Inteligente de Control de Acceso a Laboratorios<br>
+Proyecto Escolar - Inteligencia Artificial
+
+</footer>
 
 </body>
 </html>
+```
